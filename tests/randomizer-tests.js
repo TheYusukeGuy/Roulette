@@ -1,0 +1,15 @@
+const R=require('../js/randomizer.js'),a=require('assert'),now=Date.now(),D=864e5;
+const cat=(w=1)=>({id:'c',weight:w,priority:3,enabled:true,created:now,lastSelected:now});
+const task=(o={})=>({id:'t'+Math.random(),catId:'c',priority:3,weight:1,active:true,available:true,created:now,lastSelected:now,...o});
+const freq=(ts,cs,x,n=20000)=>{const sc=R.scoreAll(ts,cs,x),f={};for(let i=0;i<n;i++){const p=R.pick(sc).task.id;f[p]=(f[p]||0)+1}return f};
+let t1=task({weight:3}),t2=task({weight:1}),f=freq([t1,t2],[cat()],{now});a(f[t1.id]/f[t2.id]>2.5&&f[t1.id]/f[t2.id]<3.6,'weights proportional');
+t1=task({active:false});t2=task({available:false});let t3=task();f=freq([t1,t2,t3],[cat()],{now},500);a(!f[t1.id]&&!f[t2.id]&&f[t3.id]===500,'disabled/unavailable never picked');
+a(!R.scoreAll([task()],[{...cat(),enabled:false}],{now}).length,'disabled category excluded');
+t1=task({lastSelected:now-10*D});t2=task();a(R.scoreTask(t1,cat(),{now})>R.scoreTask(t2,cat(),{now}),'neglect raises score');
+a(R.scoreTask(t1,cat(),{now,mods:{ignoreNeglect:true}})===R.scoreTask(t2,cat(),{now,mods:{ignoreNeglect:true}}),'ignoreNeglect');
+t1=task({deadline:new Date(now+D).toISOString().slice(0,10)});a(R.scoreTask(t1,cat(),{now})>R.scoreTask(task(),cat(),{now}),'deadline raises score');
+t1=task({deadline:'2000-01-01'});a(R.scoreTask(t1,cat(),{now})<=R.CFG.maxScore&&R.scoreTask(t1,cat(),{now})<4*R.scoreTask(task(),cat(),{now}),'overdue bounded');
+t1=task();t2=task();f=freq([t1],[cat()],{now,lastTaskId:t1.id},50);a(f[t1.id]===50,'repetition possible (only candidate)');
+a(R.scoreTask(t1,cat(),{now,lastTaskId:t1.id})<R.scoreTask(t1,cat(),{now,lastTaskId:t1.id,mods:{allowRepeat:true}}),'chaos allowRepeat removes penalty');
+a(R.scoreTask(task({weight:5}),cat(5),{now,mods:{ignoreWeights:true}})===R.scoreTask(task(),cat(),{now,mods:{ignoreWeights:true}}),'ignoreWeights');
+a(R.pick([])===null,'empty pool');console.log('randomizer tests passed');
